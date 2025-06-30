@@ -143,4 +143,38 @@ public class QuerydslBasicTest {
         assertThat(memberNull.getUsername()).isNull();
     }
 
+    @Test
+    public void paging1() {
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetch();
+
+        assertThat(result.size()).isEqualTo(2);
+    }
+
+    /**
+     * fetchResults()는 내부적으로 다음 두 개의 쿼리를 자동으로 실행
+       - 1. 데이터 조회 쿼리
+       - 2. count 조회 쿼리
+     * 하지만 복잡하고 예측 불가능한 쿼리가 생성될 수 있어 해당 API는 더 이상 권장하지 않음
+       - 데이터 조회와 count 조회를 명시적으로 분리하는 것을 권장
+     */
+    @Test
+    public void paging2() {
+        QueryResults<Member> queryResults = queryFactory
+                .selectFrom(member)
+                .orderBy(member.username.desc())
+                .offset(1)
+                .limit(2)
+                .fetchResults();
+
+        assertThat(queryResults.getTotal()).isEqualTo(4);
+        assertThat(queryResults.getLimit()).isEqualTo(2);
+        assertThat(queryResults.getOffset()).isEqualTo(1);
+        assertThat(queryResults.getResults().size()).isEqualTo(2);
+    }
+
 }
