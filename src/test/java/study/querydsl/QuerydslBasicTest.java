@@ -4,6 +4,7 @@ import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
+import org.assertj.core.api.AssertionsForClassTypes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +15,7 @@ import study.querydsl.entity.Team;
 
 import java.util.List;
 
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static study.querydsl.entity.QMember.*;
 import static study.querydsl.entity.QTeam.team;
 
@@ -58,7 +59,7 @@ public class QuerydslBasicTest {
                 .setParameter("username", "member1")
                 .getSingleResult();
 
-        assertThat(findMember.getUsername()).isEqualTo("member1");
+        AssertionsForClassTypes.assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
     @Test
@@ -69,7 +70,7 @@ public class QuerydslBasicTest {
                 .where(member.username.eq("member1"))
                 .fetchOne();
 
-        assertThat(findMember.getUsername()).isEqualTo("member1");
+        AssertionsForClassTypes.assertThat(findMember.getUsername()).isEqualTo("member1");
     }
 
     @Test
@@ -83,8 +84,8 @@ public class QuerydslBasicTest {
                 )
                 .fetchOne();
 
-        assertThat(foundMember.getUsername()).isEqualTo("member1");
-        assertThat(foundMember.getAge()).isEqualTo(10);
+        AssertionsForClassTypes.assertThat(foundMember.getUsername()).isEqualTo("member1");
+        AssertionsForClassTypes.assertThat(foundMember.getAge()).isEqualTo(10);
     }
 
     @Test
@@ -140,9 +141,9 @@ public class QuerydslBasicTest {
         Member member5 = result.get(0);
         Member member6 = result.get(1);
         Member memberNull = result.get(2);
-        assertThat(member5.getUsername()).isEqualTo("member5");
-        assertThat(member6.getUsername()).isEqualTo("member6");
-        assertThat(memberNull.getUsername()).isNull();
+        AssertionsForClassTypes.assertThat(member5.getUsername()).isEqualTo("member5");
+        AssertionsForClassTypes.assertThat(member6.getUsername()).isEqualTo("member6");
+        AssertionsForClassTypes.assertThat(memberNull.getUsername()).isNull();
     }
 
     @Test
@@ -154,7 +155,7 @@ public class QuerydslBasicTest {
                 .limit(2)
                 .fetch();
 
-        assertThat(result.size()).isEqualTo(2);
+        AssertionsForClassTypes.assertThat(result.size()).isEqualTo(2);
     }
 
     /**
@@ -173,10 +174,10 @@ public class QuerydslBasicTest {
                 .limit(2)
                 .fetchResults();
 
-        assertThat(queryResults.getTotal()).isEqualTo(4);
-        assertThat(queryResults.getLimit()).isEqualTo(2);
-        assertThat(queryResults.getOffset()).isEqualTo(1);
-        assertThat(queryResults.getResults().size()).isEqualTo(2);
+        AssertionsForClassTypes.assertThat(queryResults.getTotal()).isEqualTo(4);
+        AssertionsForClassTypes.assertThat(queryResults.getLimit()).isEqualTo(2);
+        AssertionsForClassTypes.assertThat(queryResults.getOffset()).isEqualTo(1);
+        AssertionsForClassTypes.assertThat(queryResults.getResults().size()).isEqualTo(2);
     }
 
     @Test
@@ -194,11 +195,11 @@ public class QuerydslBasicTest {
                 .fetch();
 
         Tuple tuple = result.get(0);
-        assertThat(tuple.get(member.count())).isEqualTo(4);
-        assertThat(tuple.get(member.age.sum())).isEqualTo(100);
-        assertThat(tuple.get(member.age.avg())).isEqualTo(25);
-        assertThat(tuple.get(member.age.max())).isEqualTo(40);
-        assertThat(tuple.get(member.age.min())).isEqualTo(10);
+        AssertionsForClassTypes.assertThat(tuple.get(member.count())).isEqualTo(4);
+        AssertionsForClassTypes.assertThat(tuple.get(member.age.sum())).isEqualTo(100);
+        AssertionsForClassTypes.assertThat(tuple.get(member.age.avg())).isEqualTo(25);
+        AssertionsForClassTypes.assertThat(tuple.get(member.age.max())).isEqualTo(40);
+        AssertionsForClassTypes.assertThat(tuple.get(member.age.min())).isEqualTo(10);
     }
 
     /**
@@ -216,11 +217,47 @@ public class QuerydslBasicTest {
         Tuple teamA = result.get(0);
         Tuple teamB = result.get(1);
 
-        assertThat(teamA.get(team.name)).isEqualTo("teamA");
-        assertThat(teamA.get(member.age.avg())).isEqualTo(15);
+        AssertionsForClassTypes.assertThat(teamA.get(team.name)).isEqualTo("teamA");
+        AssertionsForClassTypes.assertThat(teamA.get(member.age.avg())).isEqualTo(15);
 
-        assertThat(teamB.get(team.name)).isEqualTo("teamB");
-        assertThat(teamB.get(member.age.avg())).isEqualTo(35);
+        AssertionsForClassTypes.assertThat(teamB.get(team.name)).isEqualTo("teamB");
+        AssertionsForClassTypes.assertThat(teamB.get(member.age.avg())).isEqualTo(35);
+    }
+
+    /**
+     * 팀A에 소속된 모든 회원
+     */
+    @Test
+    public void join() {
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .join(member.team, team)
+                .where(team.name.eq("teamA"))
+                .fetch();
+
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("member1", "member2");
+    }
+
+    /**
+     * 세타 조인 (외부 조인이 불가능하지만, on 절을 사용하면 외부 조인 가능)
+     * 회원 이름이 팀 이름과 같은 회원 조회
+     */
+    @Test
+    public void theta_join() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+
+        List<Member> result = queryFactory
+                .select(member)
+                .from(member, team) // 연관관계가 없어도 join 가능 (모든 member테이블과 team테이블을 조인하는 방식, from 절에서 여러 엔티티를 선택)
+                .where(member.username.eq(team.name))
+                .fetch();
+
+        assertThat(result)
+                .extracting("username")
+                .containsExactly("teamA", "teamB");
     }
 
 }
