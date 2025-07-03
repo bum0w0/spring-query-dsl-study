@@ -260,4 +260,43 @@ public class QuerydslBasicTest {
                 .containsExactly("teamA", "teamB");
     }
 
+    /**
+     * 회원과 팀을 조인하면서, 팀 이름이 teamA인 팀만 조회, 회원은 모두 조회
+     * JPQL: select m from Member m left join m.team on t.name = 'teamA'
+     */
+    @Test
+    public void join_on_filtering() {
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                .leftJoin(member.team, team).on(team.name.eq("teamA"))
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple: " + tuple);
+        }
+    }
+
+    /**
+     * 연관관계가 없는 엔티티 외부 조인
+     * 회원의 이름이 팀 이름과 같은 대상만 외부 조인
+     */
+    @Test
+    public void join_on_no_relation() {
+        em.persist(new Member("teamA"));
+        em.persist(new Member("teamB"));
+
+        List<Tuple> result = queryFactory
+                .select(member, team)
+                .from(member)
+                // leftJoin(team).on(...)은 연관관계가 없는 엔티티(Member, Team)를 조인할 때 사용
+                // leftJoin(member.team, team).on(...)은 연관관계가 이미 설정된 필드를 통해 조인하되, 추가 조건을 .on()으로 줄 때 사용
+                .leftJoin(team).on(member.username.eq(team.name)) // team 테이블을 그냥 가져와서 username = name으로만 조인
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple: " + tuple);
+        }
+    }
+
 }
