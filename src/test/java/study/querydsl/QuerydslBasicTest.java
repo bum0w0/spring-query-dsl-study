@@ -2,6 +2,7 @@ package study.querydsl;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.ExpressionUtils;
 import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
@@ -513,13 +514,14 @@ public class QuerydslBasicTest {
                 .getResultList();
 
         for (MemberDto memberDto : result) {
-            System.out.println("result: " + memberDto);
+            System.out.println("memberDto = " + memberDto);
         }
     }
 
     @Test
     public void findDtoBySetter() {
         List<MemberDto> result = queryFactory
+                // Projections.bean()은 DTO의 setter 메서드를 사용하여 값을 주입 (기본 생성자 필요)
                 .select(Projections.bean(MemberDto.class,
                         member.username,
                         member.age))
@@ -527,13 +529,14 @@ public class QuerydslBasicTest {
                 .fetch();
 
         for (MemberDto memberDto : result) {
-            System.out.println("DTO: " + memberDto);
+            System.out.println("memberDto = " + memberDto);
         }
     }
 
     @Test
     public void findDtoByField() {
         List<MemberDto> result = queryFactory
+                // fields : DTO의 필드에 직접 값을 주입 (기본 생성자 필요, setter 메서드 불필요)
                 .select(Projections.fields(MemberDto.class,
                         member.username,
                         member.age))
@@ -541,13 +544,14 @@ public class QuerydslBasicTest {
                 .fetch();
 
         for (MemberDto memberDto : result) {
-            System.out.println("DTO: " + memberDto);
+            System.out.println("memberDto = " + memberDto);
         }
     }
 
     @Test
     public void findDtoByConstruct() {
         List<MemberDto> result = queryFactory
+                // constructor : DTO의 생성자를 사용하여 값을 주입 (기본 생성자 필요)
                 .select(Projections.constructor(MemberDto.class,
                         member.username,
                         member.age))
@@ -555,21 +559,27 @@ public class QuerydslBasicTest {
                 .fetch();
 
         for (MemberDto memberDto : result) {
-            System.out.println("DTO: " + memberDto);
+            System.out.println("memberDto = " + memberDto);
         }
     }
 
     @Test
     public void findUserDto() {
+        QMember memberSub = new QMember("memberSub");
         List<UserDto> result = queryFactory
                 .select(Projections.fields(UserDto.class,
+                        // as()를 사용하여 DTO의 필드 이름과 매핑되는 이름을 변경할 수 있음
                         member.username.as("name"),
-                        member.age))
+                        // 서브쿼리를 DTO 필드에 매핑하려면, ExpressionUtils.as()로 서브쿼리 결과에 별칭을 지정해야 함
+                        ExpressionUtils.as(JPAExpressions
+                                .select(memberSub.age.max())
+                                        .from(memberSub), "age")
+                ))
                 .from(member)
                 .fetch();
 
         for (UserDto userDto : result) {
-            System.out.println("userDTO = " + userDto);
+            System.out.println("userDto = " + userDto);
         }
     }
 
@@ -583,7 +593,7 @@ public class QuerydslBasicTest {
                 .fetch();
 
         for (UserDto userDto : result) {
-            System.out.println("userDTO = " + userDto);
+            System.out.println("userDto = " + userDto);
         }
     }
 
