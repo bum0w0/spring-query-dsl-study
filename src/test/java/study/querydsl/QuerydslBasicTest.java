@@ -682,4 +682,78 @@ public class QuerydslBasicTest {
         return usernameEq(usernameCond).and(ageEq(ageCond));
     }
 
+    @Test
+    public void bulkUpdate() {
+
+        // member1 -> 비회원
+        // member2 -> 비회원
+        // member3 -> member3
+        // member4 -> member4
+
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(25))
+                .execute();
+
+        // bulk 연산은 DB에 직접 적용되므로 영속성 컨텍스트에 남아있는 엔티티 상태와 불일치 (초기화 필요)
+        em.flush();
+        em.clear();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for (Member member : result) {
+            System.out.println("member = " + member);
+        }
+
+    }
+
+    @Test
+    public void bulkAdd() {
+
+        // 모든 회원의 나이에 1을 더하기
+
+        long count = queryFactory
+                .update(member)
+                // 빼기 : member.age.subtract(1)
+                // 곱하기 : member.age.multiply(2)
+                .set(member.age, member.age.add(1))
+                .execute();
+
+        em.flush();
+        em.clear();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for (Member member : result) {
+            System.out.println("member = " + member);
+        }
+    }
+
+    @Test
+    public void bulkDelete() {
+
+        // 나이가 15 이상인 회원 삭제
+
+        long count = queryFactory
+                .delete(member)
+                .where(member.age.gt(15))
+                .execute();
+
+        em.flush();
+        em.clear();
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+
+        for (Member member : result) {
+            System.out.println("member = " + member);
+        }
+    }
+
 }
